@@ -128,7 +128,6 @@ internal class ClubCommands
             var team = await SelectTeamInList(MainState.SelectedClub, parameters.First());
             MainState.SelectedTeam = team;
             Console.WriteLine($"Team {team.Id} - {team.Name} selected!");
-            return CommandResult.Ok;
         }
         else
         {
@@ -140,16 +139,13 @@ internal class ClubCommands
                 return CommandResult.Error;
             }
             MainState.SelectedTeam = team;
-            return CommandResult.Ok;
         }
-
-
         return CommandResult.Ok;
-
     }
 
     private static async Task<Team> SelectTeamInList(Club selectedClub, string? filter = null)
     {
+
         await using var db = new StatsDbContext();
         var teams = await (
             filter is null
@@ -169,31 +165,14 @@ internal class ClubCommands
     {
         if (MainState.SelectedClub is null)
         {
-            Console.WriteLine("No club selected. Please run /c <club-id> before");
+            Console.WriteLine("No club selected. Please run /sc before");
             return CommandResult.Error;
         }
 
         await using var db = new StatsDbContext();
         var added = await ClubHandler.RefreshClubTeams(MainState.SelectedClub.Id, db);
+        await db.SaveChangesAsync();
         Console.WriteLine($"Added {added} teams");
-        return CommandResult.Ok;
-    }
-
-    public static async Task<CommandResult> ListClubTeams()
-    {
-        if (MainState.SelectedClub is null)
-        {
-            Console.WriteLine("No club selected. Please run /c <club-id> before");
-            return CommandResult.Error;
-        }
-
-        await using var db = new StatsDbContext();
-        var teams = db.Teams.Where(t => t.ClubId == MainState.SelectedClub.Id);
-        foreach (var team in teams)
-        {
-            Console.WriteLine($"{team.Id} - {team.Name}");
-        }
-
         return CommandResult.Ok;
     }
 

@@ -10,8 +10,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FcbqStats.Migrations
 {
     [DbContext(typeof(StatsDbContext))]
-    [Migration("20250217160321_TeamAndClub")]
-    partial class TeamAndClub
+    [Migration("20250219072446_Initial")]
+    partial class Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -44,7 +44,41 @@ namespace FcbqStats.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("AwayTeamId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AwayTeamName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Date")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Hour")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("LocalTeamId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LocalTeamName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StatisticsFcbqSid")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("StatisticsId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("StatisticsId1")
+                        .HasColumnType("INTEGER");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("StatisticsId1");
 
                     b.ToTable("Matches");
                 });
@@ -60,11 +94,15 @@ namespace FcbqStats.Migrations
                     b.ToTable("Players");
                 });
 
-            modelBuilder.Entity("FcbqStats.Data.Stat", b =>
+            modelBuilder.Entity("FcbqStats.Data.Statistics", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("FcbqSid")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -89,6 +127,15 @@ namespace FcbqStats.Migrations
                     b.HasIndex("ClubId");
 
                     b.ToTable("Teams");
+                });
+
+            modelBuilder.Entity("FcbqStats.Data.Match", b =>
+                {
+                    b.HasOne("FcbqStats.Data.Statistics", "Statistics")
+                        .WithMany()
+                        .HasForeignKey("StatisticsId1");
+
+                    b.Navigation("Statistics");
                 });
 
             modelBuilder.Entity("FcbqStats.Data.Team", b =>

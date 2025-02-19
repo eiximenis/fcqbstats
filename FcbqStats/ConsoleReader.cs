@@ -2,26 +2,15 @@
 
 class ConsoleReader
 {
-    public static (int Option,  string StrCmd) ReadCommandValue()
+    public static string ReadCommandValue()
     {
 
         var line = AnsiConsole.Prompt(
-            new TextPrompt<string>("Enter command:")
+            new TextPrompt<string>("Enter command (? for help):")
         );
 
-        if (int.TryParse(line, out var ov))
-        {
-            return (ov, "");
-        }
-        else
-        {
-            return (-1, line ?? "");
-        }
+        return line;
+
     }
 
-    public static int ReadIntValue()
-    {
-        var input = Console.ReadLine();
-        return int.TryParse(input, out var ov) ? ov : -1;
-    }
 }

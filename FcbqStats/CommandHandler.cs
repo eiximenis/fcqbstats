@@ -1,23 +1,38 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Reflection.Emit;
+using System.Security.AccessControl;
 using FcbqStats;
 using FcbqStats.Commands;
-using FcbqStats.Data;
 using Spectre.Console;
 
-record CommandInfo (string Desc, Func<IEnumerable<string>, Task<CommandResult>> CommandFunc);
+record CommandInfo(string Desc, Func<IEnumerable<string>, Task<CommandResult>> CommandFunc);
 
 public class CommandHandler
 {
 
-    private Dictionary<string, CommandInfo> _commands = new Dictionary<string, CommandInfo>()
+    private readonly Dictionary<string, CommandInfo> _commands;
+    public CommandHandler() 
     {
-        ["/lc"] = new CommandInfo("Reload clubs from FCBQ", ClubCommands.RefreshClubsList),
-        ["/sc"] = new CommandInfo("Select club", ClubCommands.SelectClub),
-        ["/st"] = new CommandInfo("Select team", ClubCommands.SelectTeam),
-        ["/lm"] = new CommandInfo("Load Matches", TeamCommands.RefreshCalendar),
-        [":q"] = new CommandInfo("Exit app", CoreCommands.Exit)
-    };
+        _commands = new Dictionary<string, CommandInfo>()
+        {
+            ["/lc"] = new CommandInfo("Reload clubs from FCBQ", ClubCommands.RefreshClubsList),
+            ["/sc"] = new CommandInfo("Select club", ClubCommands.SelectClub),
+            ["/lt"] = new CommandInfo("Reload teams from selected club", ClubCommands.RefreshClubTeams),
+            ["/st"] = new CommandInfo("Select team", ClubCommands.SelectTeam),
+            ["/lm"] = new CommandInfo("Load Matches", TeamCommands.RefreshCalendar),
+            ["/sm"] = new CommandInfo("Select Match", TeamCommands.SelectMatch),
+            ["/ls"] = new CommandInfo("Load stats for match", MatchCommands.LoadStatsForMatch),
+            ["?"] = new CommandInfo("Help", Help),
+            [":status"] = new CommandInfo("View Status", CoreCommands.Status),
+            [":q"] = new CommandInfo("Exit app", CoreCommands.Exit)
+        };
+    }
 
+    private Task<CommandResult> Help(IEnumerable<string> arg)
+    {
+        ShowCommands();
+        return Task.FromResult(CommandResult.Ok);
+    }
 
     public async Task<CommandResult> HandleStrCommand(string line)
     {
@@ -26,11 +41,9 @@ public class CommandHandler
         {
             return await cmdInfo.CommandFunc(tokens.Skip(1));
         }
-        else
-        {
-            Console.WriteLine("Not implemented command");
-            return CommandResult.Error;
-        }
+
+        AnsiConsole.MarkupLine("[red]Not implemented command[/]");
+        return CommandResult.Error;
     }
     public void ShowCommands()
     {
@@ -41,9 +54,4 @@ public class CommandHandler
         }
     }
 
-}
-
-class CoreCommands
-{
-    public static Task<CommandResult> Exit(IEnumerable<string> parameters) => Task.FromResult(CommandResult.Exit);
 }

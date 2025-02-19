@@ -10,10 +10,10 @@ public class Match
 {
     public int Id { get; set; }
     public int LocalTeamId { get; set; }
-    public Team LocalTeam { get; set; } = null!;
+    public string LocalTeamName { get; set; } = null!;
 
     public int AwayTeamId { get; set; }
-    public Team AwayTeam { get; set; } = null!;
+    public string AwayTeamName { get; set; } = null!;
     public string Date { get; set; } = "";
     public string Hour { get; set; } = "";
 

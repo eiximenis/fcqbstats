@@ -14,6 +14,7 @@ public class StatsDbContext : DbContext
     public DbSet<Team> Teams { get; set; }
     public DbSet<Match> Matches { get; set; }
     public DbSet<Statistics> Stats { get; set; }
+    public DbSet<MatchEvent> MatchEvents { get; set; }
 
     public string DbPath { get; }
 

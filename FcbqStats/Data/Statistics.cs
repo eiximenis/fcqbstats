@@ -8,5 +8,6 @@ namespace FcbqStats.Data;
 public class Statistics
 {
     public long Id { get; set; }
+    public int MatchId { get; set; }
     public string FcbqSid { get; set; } = "";
 }
