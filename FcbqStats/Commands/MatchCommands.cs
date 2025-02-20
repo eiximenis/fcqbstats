@@ -21,45 +21,51 @@ public class MatchCommands
         var stats = await LoadStatsForMatchFromDb(MainState.SelectedMatch.Id);
         if (!stats.Any())
         {
-            await CreateStatsForMatch(MainState.SelectedMatch.Id);
+            stats = await CreateAndSaveStatsForMatch(MainState.SelectedMatch.Id);
         }
 
-        
+        MainState.AddStatistics(MainState.SelectedMatch.Id, stats);
         return CommandResult.Ok;
     }
 
-    private static async Task CreateStatsForMatch(int matchId)
+    private static async Task<IEnumerable<Statistics>> CreateAndSaveStatsForMatch(int matchId)
     {
 
         // Check if we have match events in database
         var events = await LoadMatchMovesFromDb(matchId);
         if (!events.Any())
         {
-            events = await GetEventsFromFcbq(matchId);
+            AnsiConsole.MarkupLine("No match history in database. Trying to fetch data from FCBQ");
+            events = await GetMatchMovesFromFcbq(matchId);
+            AnsiConsole.MarkupLine("Data fetched succesfully and saved to database");
         }
 
         var statsCalculator = new StatsCalculator(events);
-        statsCalculator.GenerateStatistics();
-
+        var stats = statsCalculator.GenerateStatistics();
+        await using var db = new StatsDbContext();
+        db.Stats.AddRange(stats);
+        await db.SaveChangesAsync();
+        AnsiConsole.MarkupLine($"[green]Saved[/] stats for match [white]{matchId}[/]");
+        return stats;
     }
 
-    private static async Task<IEnumerable<MatchEvent>> GetEventsFromFcbq(int matchId)
+    private static async Task<IEnumerable<MatchEvent>> GetMatchMovesFromFcbq(int matchId)
     {
         var matchDetails = await GetMatchDetailsFromFcbq(matchId);
         if (matchDetails is not null)
         {
             Console.WriteLine($"Found statistics id {matchDetails.statsUid} for match {MainState.SelectedMatch.Id}");
-             await GenerateEventsForMatch(matchDetails.statsUid, matchId);
-        }
-        else
-        {
-            Console.WriteLine("Statistics unavailable for match :(");
+            await GenerateAndSaveEventsForMatch(matchDetails.statsUid, matchId);
+            await using var db = new StatsDbContext();
+            return await db.MatchEvents.Where(mv => mv.MatchId == matchId).ToListAsync();
         }
 
+        Console.WriteLine("Statistics unavailable for match :(");
         return Array.Empty<MatchEvent>();
+
     }
 
-    private static async Task GenerateEventsForMatch(string statsUid, int matchId)
+    private static async Task GenerateAndSaveEventsForMatch(string statsUid, int matchId)
     {
         var fcbqEvents = await GetEventsForMatchFromFcbq(statsUid);
         await using var db = new StatsDbContext();
@@ -83,6 +89,19 @@ public class MatchCommands
                 Timestamp = DateTime.ParseExact(evt.Timestamp, "yyyyMMddHHmmss", null)
             };
             db.MatchEvents.Add(dbEvent);
+            if (evt.ActorId !=0)
+            {
+                var dbPlayer = await db.Players.FindAsync(evt.ActorId);
+                if (dbPlayer is null)
+                {
+                    var player = new Player()
+                    {
+                        Id = evt.ActorId,
+                        Name = evt.ActorName
+                    };
+                    db.Players.Add(player);
+                }
+            }
         }
         var saved = await db.SaveChangesAsync();
 
@@ -121,5 +140,21 @@ public class MatchCommands
         await using var db = new StatsDbContext();
         var moves = await db.MatchEvents.Where(mv => mv.MatchId == matchId).ToListAsync();
         return moves;
+    }
+
+    public static async Task<CommandResult> DeleteStats(IEnumerable<string> arg)
+    {
+        if (MainState.SelectedMatch == null)
+        {
+            AnsiConsole.MarkupLine("No match selected, please run [white]/lm[/] to load a match to start");
+            return CommandResult.Error;
+        }
+
+        await using var db = new StatsDbContext();
+        var stats = await db.Stats.Where(s => s.MatchId == MainState.SelectedMatch.Id).ToListAsync();
+        db.Stats.RemoveRange(stats);
+        await db.SaveChangesAsync();
+        AnsiConsole.MarkupLine($"[red]Deleted[/] stats for match [white]{MainState.SelectedMatch.Id}[/]");
+        return CommandResult.Ok;
     }
 }

@@ -20,6 +20,7 @@ class CoreCommands
         var clubs = await db.Clubs.CountAsync();
         var teams = await db.Teams.CountAsync();
         var matches = await db.Matches.CountAsync();
+        var players = await db.Players.CountAsync();
 
         if (clubs == 0)
         {
@@ -28,7 +29,7 @@ class CoreCommands
         else
         {
             AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine($"[white]Loaded Clubs:[/] {clubs}.[white]Loaded Teams:[/] {teams}.[white] Loaded Matches: {matches}[/]");
+            AnsiConsole.MarkupLine($"[white]Loaded Clubs:[/] {clubs}.[white]Loaded Teams:[/] {teams}.[white] Loaded Players: {players}[/][white] Loaded Matches: {matches}[/]");
             if (MainState.SelectedClub != null)
             {
                 AnsiConsole.MarkupLine($"[white]Selected Club:[/] {MainState.SelectedClub.Id} - {MainState.SelectedClub.Name}");

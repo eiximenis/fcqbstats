@@ -22,6 +22,9 @@ public class CommandHandler
             ["/lm"] = new CommandInfo("Load Matches", TeamCommands.RefreshCalendar),
             ["/sm"] = new CommandInfo("Select Match", TeamCommands.SelectMatch),
             ["/ls"] = new CommandInfo("Load stats for match", MatchCommands.LoadStatsForMatch),
+            ["/vs"] = new CommandInfo("View loaded stats", StatsCommands.View),
+            ["!ds"] = new CommandInfo("Delete stats for current match", MatchCommands.DeleteStats),
+            ["/help"] = new CommandInfo("Help", Help),
             ["?"] = new CommandInfo("Help", Help),
             [":status"] = new CommandInfo("View Status", CoreCommands.Status),
             [":q"] = new CommandInfo("Exit app", CoreCommands.Exit)

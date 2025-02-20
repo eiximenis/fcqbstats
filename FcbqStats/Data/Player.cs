@@ -7,5 +7,9 @@ using System.Threading.Tasks;
 namespace FcbqStats.Data;
 public class Player
 {
-    public int Id { get; set; }
+    public long Id { get; set; }
+
+    public string Name { get; set; }
+
+    public int TeamId { get; set; }
 }

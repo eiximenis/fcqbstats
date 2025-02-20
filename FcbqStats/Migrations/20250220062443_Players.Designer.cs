@@ -3,6 +3,7 @@ using System;
 using FcbqStats.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FcbqStats.Migrations
 {
     [DbContext(typeof(StatsDbContext))]
-    partial class StatsDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250220062443_Players")]
+    partial class Players
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.2");
@@ -68,6 +71,9 @@ namespace FcbqStats.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("StatisticsId")
+                        .HasColumnType("INTEGER");
+
                     b.HasKey("Id");
 
                     b.ToTable("Matches");
@@ -122,67 +128,9 @@ namespace FcbqStats.Migrations
                     b.ToTable("MatchEvents");
                 });
 
-            modelBuilder.Entity("FcbqStats.Data.PeriodStatistics", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("Foults")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("OnePointAttempts")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("OnePointMade")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("OnePointPercent")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("PeriodIndex")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("Points")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("SecondsPlayed")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("StatisticsId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<long>("StatisticsId1")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("ThreePointAttempts")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("ThreePointPercent")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("ThreePointsMade")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("TwoPointAttempts")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("TwoPointPercent")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("TwoPointsMade")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("StatisticsId1");
-
-                    b.ToTable("PeriodStatistics");
-                });
-
             modelBuilder.Entity("FcbqStats.Data.Player", b =>
                 {
-                    b.Property<long>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
@@ -211,21 +159,10 @@ namespace FcbqStats.Migrations
                     b.Property<int>("MatchId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<long>("PlayerId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("TotalFouls")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("TotalPoints")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("TotalSeconds")
-                        .HasColumnType("INTEGER");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("MatchId");
+                    b.HasIndex("MatchId")
+                        .IsUnique();
 
                     b.ToTable("Stats");
                 });
@@ -250,22 +187,11 @@ namespace FcbqStats.Migrations
                     b.ToTable("Teams");
                 });
 
-            modelBuilder.Entity("FcbqStats.Data.PeriodStatistics", b =>
-                {
-                    b.HasOne("FcbqStats.Data.Statistics", "Statistics")
-                        .WithMany("PeriodStats")
-                        .HasForeignKey("StatisticsId1")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Statistics");
-                });
-
             modelBuilder.Entity("FcbqStats.Data.Statistics", b =>
                 {
                     b.HasOne("FcbqStats.Data.Match", null)
-                        .WithMany("Statistics")
-                        .HasForeignKey("MatchId")
+                        .WithOne("Statistics")
+                        .HasForeignKey("FcbqStats.Data.Statistics", "MatchId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
@@ -284,11 +210,6 @@ namespace FcbqStats.Migrations
             modelBuilder.Entity("FcbqStats.Data.Match", b =>
                 {
                     b.Navigation("Statistics");
-                });
-
-            modelBuilder.Entity("FcbqStats.Data.Statistics", b =>
-                {
-                    b.Navigation("PeriodStats");
                 });
 #pragma warning restore 612, 618
         }

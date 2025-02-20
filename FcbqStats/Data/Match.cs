@@ -18,7 +18,5 @@ public class Match
     public string Hour { get; set; } = "";
 
     public string StatisticsFcbqSid { get; set; } = "";
-
-    public int? StatisticsId { get; set; }
-    public Statistics? Statistics { get; set; }
+    public ICollection<Statistics?> Statistics { get; set; }
 }

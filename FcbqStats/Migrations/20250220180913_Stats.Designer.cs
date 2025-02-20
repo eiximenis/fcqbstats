@@ -3,6 +3,7 @@ using System;
 using FcbqStats.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FcbqStats.Migrations
 {
     [DbContext(typeof(StatsDbContext))]
-    partial class StatsDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250220180913_Stats")]
+    partial class Stats
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.2");
@@ -67,6 +70,9 @@ namespace FcbqStats.Migrations
                     b.Property<string>("StatisticsFcbqSid")
                         .IsRequired()
                         .HasColumnType("TEXT");
+
+                    b.Property<int?>("StatisticsId")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -214,18 +220,10 @@ namespace FcbqStats.Migrations
                     b.Property<long>("PlayerId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("TotalFouls")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("TotalPoints")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("TotalSeconds")
-                        .HasColumnType("INTEGER");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("MatchId");
+                    b.HasIndex("MatchId")
+                        .IsUnique();
 
                     b.ToTable("Stats");
                 });
@@ -264,8 +262,8 @@ namespace FcbqStats.Migrations
             modelBuilder.Entity("FcbqStats.Data.Statistics", b =>
                 {
                     b.HasOne("FcbqStats.Data.Match", null)
-                        .WithMany("Statistics")
-                        .HasForeignKey("MatchId")
+                        .WithOne("Statistics")
+                        .HasForeignKey("FcbqStats.Data.Statistics", "MatchId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
