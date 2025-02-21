@@ -20,5 +20,6 @@ public class MatchEvent
     public string Score { get; set; }
     public bool TeamAction { get; set; }
     public DateTime Timestamp { get; set; }
-
+    public int LocalIndex { get; set; }
+    public int LicenseId { get; set; }
 }

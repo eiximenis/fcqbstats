@@ -16,4 +16,8 @@ public class Statistics
     public int TotalSeconds { get; set; }
 
     public int TotalFouls { get; set; }
+    public int PlayerLicenseId { get; set; }
+
+
+    public string TimePlayed() => $"{TotalSeconds / 60}m {TotalSeconds % 60}s";
 }

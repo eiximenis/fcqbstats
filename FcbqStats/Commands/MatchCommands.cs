@@ -69,6 +69,7 @@ public class MatchCommands
     {
         var fcbqEvents = await GetEventsForMatchFromFcbq(statsUid);
         await using var db = new StatsDbContext();
+        var idx = 0;
         foreach (var evt in fcbqEvents)
         {
             // Convert to MatchEvent
@@ -85,19 +86,22 @@ public class MatchCommands
                 Score = evt.Score,
                 TeamAction = evt.TeamAction,
                 PlayerId = evt.ActorId,
+                LicenseId = evt.LicenseId,
                 Period = evt.Period,
-                Timestamp = DateTime.ParseExact(evt.Timestamp, "yyyyMMddHHmmss", null)
+                Timestamp = DateTime.ParseExact(evt.Timestamp, "yyyyMMddHHmmss", null),
+                LocalIndex = idx++
             };
             db.MatchEvents.Add(dbEvent);
             if (evt.ActorId !=0)
             {
-                var dbPlayer = await db.Players.FindAsync(evt.ActorId);
+                var dbPlayer = db.Players.Find(evt.LicenseId);
                 if (dbPlayer is null)
                 {
                     var player = new Player()
                     {
-                        Id = evt.ActorId,
-                        Name = evt.ActorName
+                        Id = evt.LicenseId,
+                        Name = evt.ActorName,
+                        TeamId = evt.IdTeam,
                     };
                     db.Players.Add(player);
                 }
@@ -110,6 +114,7 @@ public class MatchCommands
 
     private static async Task<IEnumerable<MatchEventResponseItem>> GetEventsForMatchFromFcbq(string statsUid)
     {
+        // TODO: Explore using https://msstats.optimalwayconsulting.com/v1/fcbq/getJsonWithMatchStats/67b05fb7db257c00016746da?currentSeason=true
         var url = $"https://msstats.optimalwayconsulting.com/v1/fcbq/getJsonWithMatchMoves/{statsUid}/?currentSeason=true";
         var client = new HttpClient();
         var response = await client.GetAsync(url);
@@ -131,7 +136,7 @@ public class MatchCommands
     private static async Task<IEnumerable<Statistics>> LoadStatsForMatchFromDb(int matchId)
     {
         await using var db = new StatsDbContext();
-        return await db.Stats.Where(s => s.MatchId == matchId).ToListAsync();
+        return await db.Stats.Include(s => s.PeriodStats).Where(s => s.MatchId == matchId).ToListAsync();
     }
 
 

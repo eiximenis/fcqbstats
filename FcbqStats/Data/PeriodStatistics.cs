@@ -10,7 +10,7 @@ public class PeriodStatistics
     public long Id { get; set; }
     public int PeriodIndex { get; set; }
     public int Points { get; set; }
-    public int Foults { get; set; }
+    public int Fouls { get; set; }
     public int OnePointAttempts { get; set; }
     public int OnePointMade { get; set; }
     public int TwoPointAttempts { get; set; }
@@ -22,6 +22,8 @@ public class PeriodStatistics
     public int ThreePointPercent { get; set; }
     public int SecondsPlayed { get; set; }
 
-    public int StatisticsId { get; set; }
+    public long StatisticsId { get; set; }
     public Statistics Statistics { get; set; }
+
+    public string TimePlayed() => $"{SecondsPlayed / 60}m {SecondsPlayed % 60}s";
 }

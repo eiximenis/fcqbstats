@@ -6,6 +6,7 @@ using System.Runtime.InteropServices.Marshalling;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using FcbqStats.Daos;
 using FcbqStats.Data;
 using FcbqStats.Handlers;
 using FcbqStats.HtmlParsing;
@@ -20,6 +21,7 @@ internal class ClubCommands
     public static async Task<CommandResult> RefreshClubsList(IEnumerable<string> args)
     {
         await using var db = new StatsDbContext();
+        var clubsDao = new ClubDao(db);
         await AnsiConsole.Progress().StartAsync(async ctx =>
         {
             var task1 = ctx.AddTask("[green]Loading current clubs...[/]");
@@ -27,7 +29,7 @@ internal class ClubCommands
             var task3 = ctx.AddTask("[green]Synchronizing data...[/]");
             var url = "https://www.basquetcatala.cat/clubs/ajax";
             // Get current club data
-            var allClubs = await db.Clubs.ToListAsync();
+            var allClubs = await clubsDao.GetAllClubs();
             task1.Increment(100);
             // Read Json using HttpClient
             var client = new HttpClient();
@@ -59,7 +61,8 @@ internal class ClubCommands
     private static async Task<Club> SearchClub(string searchFilter)
     {
         await using var db = new StatsDbContext();
-        var clubs = searchFilter is null ? await db.Clubs.ToListAsync() : await db.Clubs.Where(c => c.Name.Contains(searchFilter)).ToListAsync();
+        var clubDao = new ClubDao(db);
+        var clubs = await clubDao.GetAllClubs(searchFilter);
         var club = AnsiConsole.Prompt(
             new SelectionPrompt<Club>()
                 .Title("Select a Club")
@@ -147,10 +150,8 @@ internal class ClubCommands
     {
 
         await using var db = new StatsDbContext();
-        var teams = await (
-            filter is null
-                ? db.Teams.Where(t => t.ClubId == selectedClub.Id).ToListAsync()
-                : db.Teams.Where(t => t.ClubId == selectedClub.Id && t.Name.Contains(filter)).ToListAsync());
+        var clubDao = new ClubDao(db);
+        var teams = await clubDao.GetTeamsForClub(selectedClub.Id, filter);
         var team = AnsiConsole.Prompt(
             new SelectionPrompt<Team>()
                 .Title("Select Team")

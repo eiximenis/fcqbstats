@@ -30,6 +30,7 @@ public class CommandHandler
             [":q"] = new CommandInfo("Exit app", CoreCommands.Exit)
         };
     }
+                                                                                                                                                                                                                                                                                                                                                                     
 
     private Task<CommandResult> Help(IEnumerable<string> arg)
     {

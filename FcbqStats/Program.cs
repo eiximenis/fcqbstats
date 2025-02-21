@@ -20,7 +20,7 @@ AnsiConsole.Write(
     new FigletText("FCBQ")
         .LeftJustified()
         .Color(Color.Blue));
-
+ 
 var commandHandler = new CommandHandler();
 commandHandler.ShowCommands();
 await commandHandler.HandleStrCommand(":status");

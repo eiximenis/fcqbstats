@@ -1,4 +1,5 @@
 ﻿using FcbqStats;
+using FcbqStats.Daos;
 using FcbqStats.Data;
 using FcbqStats.HtmlParsing;
 using Microsoft.EntityFrameworkCore;
@@ -14,10 +15,11 @@ internal class TeamCommands
             return CommandResult.Error;
         }
         using var db = new StatsDbContext();
+        var matchDao = new MatchDao(db);
         var parser = new GlobalCalendarParser();
         var matches = await parser.ParseContent(MainState.SelectedClub!.Id, MainState.SelectedTeam!.Id);
         Console.WriteLine($"Found {matches.Count()} for team {MainState.SelectedTeam.Name}");
-        var dbMatches = await db.Matches.Where(m => m.LocalTeamId== MainState.SelectedTeam.Id || m.AwayTeamId == MainState.SelectedTeam.Id).ToListAsync();
+        var dbMatches = await matchDao.GetMatchesOfTeam(MainState.SelectedTeam.Id);
         var added = 0;
         var updated = 0;
         foreach (var match in matches)
@@ -59,8 +61,8 @@ internal class TeamCommands
             return CommandResult.Error;
         }
         await using var db = new StatsDbContext();
-
-        var matches = await db.Matches.Where(m => m.LocalTeamId == MainState.SelectedTeam.Id || m.AwayTeamId == MainState.SelectedTeam.Id).ToListAsync();
+        var matchDao = new MatchDao(db);
+        var matches = await matchDao.GetMatchesOfTeam(MainState.SelectedTeam.Id);
         var match = AnsiConsole.Prompt(
             new SelectionPrompt<Match>()
                 .Title("Select Match")

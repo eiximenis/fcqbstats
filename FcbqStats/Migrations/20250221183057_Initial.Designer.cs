@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FcbqStats.Migrations
 {
     [DbContext(typeof(StatsDbContext))]
-    [Migration("20250220183340_TotalStats")]
-    partial class TotalStats
+    [Migration("20250221183057_Initial")]
+    partial class Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -85,6 +85,12 @@ namespace FcbqStats.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("LicenseId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("LocalIndex")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("MatchId")
                         .HasColumnType("INTEGER");
 
@@ -131,7 +137,7 @@ namespace FcbqStats.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("Foults")
+                    b.Property<int>("Fouls")
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("OnePointAttempts")
@@ -152,10 +158,7 @@ namespace FcbqStats.Migrations
                     b.Property<int>("SecondsPlayed")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("StatisticsId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<long>("StatisticsId1")
+                    b.Property<long>("StatisticsId")
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("ThreePointAttempts")
@@ -178,14 +181,14 @@ namespace FcbqStats.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("StatisticsId1");
+                    b.HasIndex("StatisticsId");
 
                     b.ToTable("PeriodStatistics");
                 });
 
             modelBuilder.Entity("FcbqStats.Data.Player", b =>
                 {
-                    b.Property<long>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
@@ -215,6 +218,9 @@ namespace FcbqStats.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<long>("PlayerId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("PlayerLicenseId")
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("TotalFouls")
@@ -257,7 +263,7 @@ namespace FcbqStats.Migrations
                 {
                     b.HasOne("FcbqStats.Data.Statistics", "Statistics")
                         .WithMany("PeriodStats")
-                        .HasForeignKey("StatisticsId1")
+                        .HasForeignKey("StatisticsId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

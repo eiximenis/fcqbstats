@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using FcbqStats.Data;
@@ -10,6 +11,7 @@ using Spectre.Console;
 public class PlayerMatchStats
 {
     public long PlayerId { get; set; }
+    public int  PlayerLicenseId { get; set; }
     public string PlayerName { get; set; }
     public string ShirtNumber { get; set; }
 
@@ -77,15 +79,16 @@ public class PlayerPeriodStats
         }
 
         // TODO
-        return PlayingTimes.Sum(pt => (pt.EndMin - pt.StartMin)*60);
+        return PlayingTimes.Sum(pt => (pt.StartMin * 60 + pt.StartSec) - (pt.EndMin * 60 + pt.EndSec));
 
     }
 }
 internal class StatsCalculator
 {
     private const int ENTRA_CAMP = 112;
-    private const  int CISTELLA_1 = 92;
+    private const int CISTELLA_1 = 92;
     private const int CISTELLA_2 = 93;
+    private const int CISTELLA_3 = 94;
     private const int ERROR_CISTELLA_1 = 96;
     private const int FINAL_PERIODE = 116;
     private const int SURT_CAMP = 115;
@@ -93,14 +96,17 @@ internal class StatsCalculator
     private const int FALTA_PERSONAL = 159;
     private const int FALTA_PERSONAL_2_TIRS = 161;
 
-    record MatchPeriod(int Index, DateTime End, int StartMin, int StartSec)
+    record MatchPeriod(int Index, int StartMin, int StartSec, int EndMin, int EndSec)
     {
         public bool HasData() => StartMin != -1 && StartSec != -1;
+
+        public bool IsClosed() => EndMin != -1 && EndSec != -1;
     }
 
     private readonly List<MatchEvent> _events;
     private readonly Dictionary<long, PlayerMatchStats> _allPlayerStats = [];
     private readonly List<MatchPeriod> _periods = [];
+    private int _numPeriods;
     public StatsCalculator(IEnumerable<MatchEvent> events)
     {
         _events = new List<MatchEvent>(events);
@@ -108,15 +114,16 @@ internal class StatsCalculator
 
     public IEnumerable<Statistics> GenerateStatistics()
     {
-        const int GLOBAL_EVENT = 0;
-        var sortedEvents = _events.OrderBy(e => e.Timestamp);
-        var globalEvents = sortedEvents.Where(e => e.PlayerId == GLOBAL_EVENT);
-        ProcessGlobalEvents(globalEvents);
-
-        foreach (var evt in sortedEvents.Where(e => e.PlayerId != GLOBAL_EVENT))
+        // We can't rely on Timestamp ordering because sometimes some events
+        // come with invalid timestamps
+        // We must assume that events are "ordered" in the API response
+        var sortedEvents = _events.OrderBy(e => e.LocalIndex);
+        _numPeriods = _events.Count(evt => evt.MoveId == FINAL_PERIODE);
+        foreach (var evt in sortedEvents)
         {
-            ProcessPlayerEvent(evt);
+            ProcessEvent(evt);
         }
+
 
         var dbStats = new List<Statistics>();
 
@@ -128,14 +135,16 @@ internal class StatsCalculator
                 PlayerId = playerStats.PlayerId,
                 TotalFouls = playerStats.TotalFoults,
                 TotalPoints = playerStats.TotalPoints,
-                TotalSeconds = playerStats.TotalSeconds
+                TotalSeconds = playerStats.TotalSeconds,
+                PlayerLicenseId = playerStats.PlayerLicenseId
+
             };
             foreach (var periodStats in playerStats.PeriodStats)
             {
                 var pstat = new PeriodStatistics();
                 pstat.PeriodIndex = periodStats.PeriodIndex;
                 pstat.Points = periodStats.Points;
-                pstat.Foults = periodStats.Foults;
+                pstat.Fouls = periodStats.Foults;
                 pstat.OnePointAttempts = periodStats.OnePointAttempts;
                 pstat.OnePointMade = periodStats.OnePointMade;
                 pstat.TwoPointAttempts = periodStats.TwoPointAttempts;
@@ -162,23 +171,41 @@ internal class StatsCalculator
         return dbStats;
     }
 
-    private void ProcessGlobalEvents(IEnumerable<MatchEvent> globalEvents)
+    private void CloseAllPendingTimes()
     {
-        var pidx = 0;
-        foreach (var ge in globalEvents)
+        foreach (var pstat in _allPlayerStats)
         {
-            switch (ge.MoveId)
+            foreach (var periodStats in pstat.Value.PeriodStats)
             {
-                case FINAL_PERIODE:
-                    _periods.Add(new MatchPeriod(pidx++, ge.Timestamp, -1, -1));
-                    break;
+                if (periodStats.PlayingTimes.Count > 0 && !periodStats.PlayingTimes.Last().IsComplete())
+                {
+                    periodStats.EndLastPlayingTime(0, 0);
+                }
             }
         }
     }
 
 
-    private void ProcessPlayerEvent(MatchEvent evt)
+    private void ProcessEvent(MatchEvent evt)
     {
+
+        if (_periods.Count == 0)
+        {
+            AddPeriod(evt);
+        }
+        var period = _periods[^1];
+        if (period.IsClosed())
+        {
+            AddPeriod(evt);
+            period = _periods[^1];
+        }
+
+        if (evt.TeamAction)
+        {
+            ProcessGlobalEvent(evt);
+            return;
+        }
+
         PlayerMatchStats playerStats = null!;
         if (_allPlayerStats.TryGetValue(evt.PlayerId, out var ps))
         {
@@ -186,16 +213,10 @@ internal class StatsCalculator
         }
         else
         {
-            playerStats = new PlayerMatchStats(_periods.Count);
+            playerStats = new PlayerMatchStats(_numPeriods);
+            playerStats.PlayerLicenseId = evt.LicenseId;
+            playerStats.PlayerId = evt.PlayerId;
             _allPlayerStats.Add(evt.PlayerId, playerStats);
-        }
-
-        var period = _periods.First(p => p.End >= evt.Timestamp);
-
-        if (!period.HasData())
-        {
-            period = period with { StartMin = evt.Min, StartSec = evt.Sec };
-            UpdatePeriod(period);
         }
 
         var periodStats = playerStats.PeriodStats[period.Index];
@@ -203,7 +224,7 @@ internal class StatsCalculator
         var currentPlayTime = periodStats.PlayingTimes.LastOrDefault();
         if (currentPlayTime is null)
         {
-            currentPlayTime = PlayingTime.Start(period.StartMin, period.StartSec);
+            currentPlayTime = evt.MoveId == ENTRA_CAMP ? PlayingTime.Start(evt.Min, evt.Sec) : PlayingTime.Start(period.StartMin, period.StartSec);
             periodStats.PlayingTimes.Add(currentPlayTime);
         }
         else if (currentPlayTime.IsComplete())
@@ -212,16 +233,11 @@ internal class StatsCalculator
             periodStats.PlayingTimes.Add(currentPlayTime);
         }
 
-
         switch (evt.MoveId)
         {
             case SALT_GUANYAT:
                 {
                     periodStats.Jump = JumpStatus.JumpWon;
-                    break;
-                }
-            case ENTRA_CAMP:
-                {
                     break;
                 }
             case SURT_CAMP:
@@ -230,35 +246,59 @@ internal class StatsCalculator
                     break;
                 }
             case ERROR_CISTELLA_1:
-            {
-                periodStats.OnePointAttempts++;
-                break;
-            }
+                {
+                    periodStats.OnePointAttempts++;
+                    break;
+                }
             case CISTELLA_1:
-            {
-                periodStats.OnePointAttempts++;
-                periodStats.OnePointMade++;
-                break;
-            }
+                {
+                    periodStats.OnePointAttempts++;
+                    periodStats.OnePointMade++;
+                    break;
+                }
             case CISTELLA_2:
                 {
                     periodStats.TwoPointAttempts++;
                     periodStats.TwoPointsMade++;
                     break;
                 }
+            case CISTELLA_3:
+                {
+                    periodStats.ThreePointAttempts++;
+                    periodStats.ThreePointsMade++;
+                    break;
+                }
             case FALTA_PERSONAL:
             case FALTA_PERSONAL_2_TIRS:
-            {
-                periodStats.Foults++;
-                break;
-            }
+                {
+                    periodStats.Foults++;
+                    break;
+                }
         }
 
     }
 
-    private void UpdatePeriod(MatchPeriod updatedPeriod)
+    private void ProcessGlobalEvent(MatchEvent evt)
     {
-        _periods[updatedPeriod.Index] = updatedPeriod;
+        switch (evt.MoveId)
+        {
+            case FINAL_PERIODE:
+                {
+                    CloseLastPeriod(evt);
+                    CloseAllPendingTimes();
+                    break;
+                }
+        }
+    }
+
+    private void CloseLastPeriod(MatchEvent evt)
+    {
+        _periods[^1] = _periods[^1] with { EndMin = evt.Min, EndSec = evt.Sec };
+    }
+
+    private void AddPeriod(MatchEvent evt)
+    {
+        _periods.Add(new MatchPeriod(_periods.Count, evt.Min, evt.Sec, -1, -1));
     }
 };
 
